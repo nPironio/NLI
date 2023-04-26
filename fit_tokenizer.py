@@ -10,7 +10,6 @@ if __name__ == "__main__":
 
     all_sentences = pd.concat((train['sentence1'], train['sentence2'])).str.lower()
 
-
     tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
     trainer = BpeTrainer(special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]"])
     tokenizer.pre_tokenizer = Whitespace()
