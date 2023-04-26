@@ -15,7 +15,7 @@ def extract_relevant_fields(records: List[Dict]) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    DATA_PATH = 'data/'
+    DATA_PATH = '../data/'
 
     for split in ['train', 'dev', 'test']:
         records = load_json_list(Path(f'{DATA_PATH}/snli_1.0/snli_1.0_train.jsonl'))

@@ -6,7 +6,7 @@ from tokenizers.processors import TemplateProcessing
 import pandas as pd
 
 if __name__ == "__main__":
-    train = pd.read_parquet('./data/train.parquet')
+    train = pd.read_parquet('../data/train.parquet')
 
     all_sentences = pd.concat((train['sentence1'], train['sentence2'])).str.lower()
 
