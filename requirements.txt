@@ -2,3 +2,4 @@ torch
 tokenizers
 pandas
 pyarrow
+mlflow
