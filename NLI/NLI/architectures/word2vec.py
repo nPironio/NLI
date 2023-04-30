@@ -1,18 +1,23 @@
 import torch
+from torch import sigmoid
+
+
+def batch_dot(v, w):
+    return torch.bmm(v.unsqueeze(1), w.unsqueeze(-1))
 
 
 class Word2Vec(torch.nn.Module):
-    def __init__(self, vocab_size, embedding_size, hidden_size):
+    def __init__(self, vocab_size, embedding_size):
         super(Word2Vec, self).__init__()
-        self.embedding_layer = torch.nn.Embedding(vocab_size, embedding_size)
-        self.linear_1 = torch.nn.Linear(2 * embedding_size, hidden_size)
-        self.linear_2 = torch.nn.Linear(hidden_size, 1)
+        self.in_embedding_layer = torch.nn.Embedding(vocab_size, embedding_size)
+        self.out_embedding_layer = torch.nn.Linear(embedding_size, vocab_size)
 
-        self.activation_fn = torch.nn.ReLU()
+    def forward(self, w, c, negs):
+        w_i = self.in_embedding_layer(w)
+        w_o = self.in_embedding_layer(c)
+        w_neg = self.in_embedding_layer(negs)
 
-    def forward(self, pairs):
-        embeddings = self.embedding_layer(pairs)
-        concat = embeddings.flatten(start_dim=1)
-        activations = self.activation_fn(self.linear_1(concat))
+        pos_sim = sigmoid(torch.bmm(w_o.unsqueeze(1), w_i.unsqueeze(-1)))
+        neg_sim = sigmoid(torch.bmm(w_neg, w_i.unsqueeze(-1)))
 
-        return torch.nn.functional.sigmoid(self.linear_2(activations))
+        return pos_sim.squeeze(-1), neg_sim.squeeze(1)
