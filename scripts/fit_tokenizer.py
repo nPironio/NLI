@@ -30,8 +30,10 @@ if __name__ == "__main__":
             for id in sentence.ids:
                 ocurrences[id] += 1
 
-    unigram_alpha_unnormalized = ocurrences/ocurrences.sum() ** alpha
+    token_frequencies = ocurrences/ocurrences.sum()
+    unigram_alpha_unnormalized =  token_frequencies ** alpha
     unigram_alpha_norm = unigram_alpha_unnormalized / unigram_alpha_unnormalized.sum()
 
+    np.save('../data/token_frequencies.npy', token_frequencies)
     np.save('../data/unigram_alpha.npy', unigram_alpha_norm)
     tokenizer.save('../data/tokenizer.json')

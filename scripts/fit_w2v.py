@@ -18,16 +18,17 @@ if __name__ == '__main__':
 
     train = pd.read_parquet('../data/train.parquet')
     val = pd.read_parquet('../data/dev.parquet')
+    token_frequencies = np.load('../data/token_frequencies.npy')
     unigram_probs = np.load('../data/unigram_alpha.npy')
 
-    train_sentences = 10000
-    val_sentences = 3000
+    num_train_sentences = 100_000
+    num_val_sentences = 30_000
 
-    train_sentences = sample_sentences(train, train_sentences)
-    val_sentences = sample_sentences(val, val_sentences)
+    train_sentences = sample_sentences(train, num_train_sentences)
+    val_sentences = sample_sentences(val, num_val_sentences)
 
-    train_ds = W2Vdataset(data=train_sentences, tokenizer=tokenizer)
-    val_ds = W2Vdataset(data=val_sentences, tokenizer=tokenizer)
+    train_ds = W2Vdataset(data=train_sentences, tokenizer=tokenizer, token_frequencies=token_frequencies)
+    val_ds = W2Vdataset(data=val_sentences, tokenizer=tokenizer, token_frequencies=token_frequencies)
 
     neg_k = 20
     embedding_size = 100
@@ -36,7 +37,7 @@ if __name__ == '__main__':
     batch_size = 128
     epochs = 50
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    loss_fn = torch.nn.BCELoss()
+    loss_fn = torch.nn.functional.binary_cross_entropy
 
     model = Word2Vec(tokenizer.get_vocab_size(), embedding_size=100).to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=lr)
@@ -56,39 +57,38 @@ if __name__ == '__main__':
     unigram_dist = torch.distributions.Categorical(probs=torch.as_tensor(unigram_probs, device=device))
     train_epoch_loss = 0
     val_epoch_loss = 0
-    try:
-        target = torch.tensor([1]+[0]*neg_k)
-        for epoch in range(epochs):
+    for epoch in range(epochs):
+        losses = []
+        print(f'-------------------- {epoch=} --------------------')
+        for ix, batch in enumerate(train_dl):
+            w, c = batch
+            negs = unigram_dist.sample(sample_shape=torch.Size((len(w), neg_k)))
+            pos_sim, neg_sim = model(w.to(device), c.to(device), negs)
+            pos_loss = loss_fn(pos_sim, torch.ones_like(pos_sim), reduction='none')
+            neg_loss = loss_fn(neg_sim, torch.ones_like(neg_sim), reduction='none').sum(dim=1)
+            loss = (pos_loss + neg_loss).mean()
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            mlflow.log_metric('train_step', loss.item())
+            losses.append(loss.item())
+        train_epoch_loss = np.mean(losses)
+
+        with torch.no_grad():
             losses = []
-            print(f'-------------------- {epoch=} --------------------')
-            for ix, batch in enumerate(train_dl):
+            for batch in val_dl:
                 w, c = batch
                 negs = unigram_dist.sample(sample_shape=torch.Size((len(w), neg_k)))
                 pos_sim, neg_sim = model(w.to(device), c.to(device), negs)
-                loss = loss_fn(pos_sim, torch.ones_like(pos_sim)) + loss_fn(neg_sim, torch.zeros_like(neg_sim))
+                pos_loss = loss_fn(pos_sim, torch.ones_like(pos_sim), reduction='none')
+                neg_loss = loss_fn(neg_sim, torch.ones_like(neg_sim), reduction='none').sum(dim=1)
+                loss = (pos_loss + neg_loss).mean()
 
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-                mlflow.log_metric('train_step', loss.item())
+                mlflow.log_metric('val_step', loss.item())
                 losses.append(loss.item())
-            train_epoch_loss = np.mean(losses)
 
-            with torch.no_grad():
-                losses = []
-                for batch in val_dl:
-                    w, c = batch
-                    negs = torch.randint(low=0, high=tokenizer.get_vocab_size(), size=(len(w), neg_k), device=device)
-                    pos_sim, neg_sim = model(w.to(device), c.to(device), negs)
-                    loss = loss_fn(pos_sim, torch.ones_like(pos_sim)) + loss_fn(neg_sim, torch.zeros_like(neg_sim))
+            val_epoch_loss = np.mean(losses)
 
-                    mlflow.log_metric('val_step', loss.item())
-                    losses.append(loss.item())
-
-                val_epoch_loss = np.mean(losses)
-
-            mlflow.log_metrics({"train_epoch_loss": train_epoch_loss, "val_epoch_loss": val_epoch_loss})
-
-    except KeyboardInterrupt:
-        pass
+        mlflow.log_metrics({"train_epoch_loss": train_epoch_loss, "val_epoch_loss": val_epoch_loss}, step=epoch)
