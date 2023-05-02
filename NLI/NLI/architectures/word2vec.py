@@ -7,7 +7,7 @@ def batch_dot(v, w):
 
 
 class Word2Vec(torch.nn.Module):
-    def __init__(self, vocab_size, embedding_size):
+    def __init__(self, vocab_size=30000, embedding_size=100):
         super(Word2Vec, self).__init__()
         self.in_embedding_layer = torch.nn.Embedding(vocab_size, embedding_size)
         self.out_embedding_layer = torch.nn.Embedding(vocab_size, embedding_size)
