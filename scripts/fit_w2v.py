@@ -35,7 +35,7 @@ if __name__ == '__main__':
     embedding_size = 100
     lr = 1e-3
     batch_size = 128
-    epochs = 50
+    epochs = 1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     train_dl = DataLoader(train_ds, shuffle=True, batch_size=batch_size)

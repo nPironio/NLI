@@ -4,6 +4,7 @@ import mlflow
 import numpy as np
 import torch.nn
 from torch.nn.functional import binary_cross_entropy
+from tqdm import tqdm
 
 from NLI.architectures import Word2Vec
 
@@ -31,7 +32,7 @@ class EmbeddingsModel:
         return self.loss(*self.forward_pass(w, c, neg_k))
 
     def obtain_embeddings(self):
-        mean_embeddings = (self.model.in_embedding_layer.weight + self.model.out_embedding_layer.weight)/2
+        mean_embeddings = self.model.in_embedding_layer.weight
         return torch.nn.functional.normalize(mean_embeddings)
 
     def fit(self, train_dl, val_dl, unigram_probs, neg_k=20, epochs=50, lr=0.001, patience=5):
@@ -42,7 +43,7 @@ class EmbeddingsModel:
         for epoch in range(epochs):
             print(f'-------------------- {epoch=} --------------------')
             losses = []
-            for ix, batch in enumerate(train_dl):
+            for ix, batch in enumerate(tqdm(train_dl, desc="Training batch")):
                 w, c = batch
                 loss = self.step(w, c, neg_k)
 
@@ -56,7 +57,7 @@ class EmbeddingsModel:
 
             with torch.no_grad():
                 losses = []
-                for batch in val_dl:
+                for batch in tqdm(val_dl, desc="Validation batch"):
                     w, c = batch
                     loss = self.step(w, c, neg_k)
 
