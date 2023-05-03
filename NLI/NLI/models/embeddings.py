@@ -30,10 +30,15 @@ class EmbeddingsModel:
     def step(self, w, c, neg_k):
         return self.loss(*self.forward_pass(w, c, neg_k))
 
-    def fit(self, train_dl, val_dl, unigram_probs, neg_k=20, epochs=50, lr=0.001):
+    def obtain_embeddings(self):
+        mean_embeddings = (self.model.in_embedding_layer.weight + self.model.out_embedding_layer.weight)/2
+        return torch.nn.functional.normalize(mean_embeddings)
+
+    def fit(self, train_dl, val_dl, unigram_probs, neg_k=20, epochs=50, lr=0.001, patience=5):
         self.unigram_dist = torch.distributions.Categorical(probs=torch.as_tensor(unigram_probs, device=self.device))
         optimizer = torch.optim.Adam(params=self.model.parameters(), lr=lr)
 
+        best_val, best_epoch = np.inf, 0
         for epoch in range(epochs):
             print(f'-------------------- {epoch=} --------------------')
             losses = []
@@ -62,8 +67,12 @@ class EmbeddingsModel:
 
             mlflow.log_metrics({"train_epoch_loss": train_epoch_loss, "val_epoch_loss": val_epoch_loss}, step=epoch)
 
-        combined_embeddings = self.model.in_embedding_layer.weight + self.model.out_embedding_layer.weight
-        self.embeddings = torch.nn.Embedding.from_pretrained(combined_embeddings)
+            if val_epoch_loss < best_val:
+                best_val = val_epoch_loss
+                best_epoch = epoch
+                self.embeddings = torch.nn.Embedding.from_pretrained(self.obtain_embeddings())
+            elif epoch - best_epoch > patience:
+                break
 
     def save(self):
         torch.save(self.embeddings.weight, '../data/w2v_embeddings.pt')
