@@ -22,6 +22,7 @@ if __name__ == "__main__":
     for split in ['train', 'dev', 'test']:
         records = load_json_list(Path(f'{DATA_PATH}/snli_1.0/snli_1.0_train.jsonl'))
         df = extract_relevant_fields(records)
+        df = df[df.target != '-']
         data[split] = df
 
     label_encoder = LabelEncoder()

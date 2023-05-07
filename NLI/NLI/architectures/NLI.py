@@ -44,8 +44,7 @@ class OutLayer(torch.nn.Module):
 
     def forward(self, v, w):
         x = torch.cat((v.sum(dim=1), w.sum(dim=1)), dim=-1)
-        y = self.layer(x)
-        return softmax(y, dim=-1)
+        return self.layer(x)
 
 
 class DecomposableAttentionNetwork(torch.nn.Module):

@@ -11,7 +11,7 @@ class NLIDataset(torch.utils.data.Dataset):
         self.s1 = self.encode(df['sentence1'].values)
         self.s2 = self.encode(df['sentence2'].values)
 
-        self.target = df['target']
+        self.target = df['target'].values
 
     def encode(self, sentences: np.ndarray, batch_size: int = 512):
         encoded = []
