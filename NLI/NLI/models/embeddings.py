@@ -47,7 +47,7 @@ class EmbeddingsModel:
         for epoch in range(epochs):
             print(f'-------------------- {epoch=} --------------------')
             losses = []
-            for ix, batch in enumerate(tqdm(train_dl, desc="Training batch")):
+            for ix, batch in enumerate(tqdm(train_dl, desc=f"Training epoch {epoch}")):
                 w, c = batch
                 loss = self.step(w, c, neg_k)
 
@@ -61,7 +61,7 @@ class EmbeddingsModel:
 
             with torch.no_grad():
                 losses = []
-                for batch in tqdm(val_dl, desc="Validation batch"):
+                for batch in tqdm(val_dl, desc=f"Validation epoch {epoch}"):
                     w, c = batch
                     loss = self.step(w, c, neg_k)
 
@@ -70,7 +70,7 @@ class EmbeddingsModel:
 
                 val_epoch_loss = np.mean(losses)
 
-            mlflow.log_metrics({"train_epoch_loss": train_epoch_loss, "val_epoch_loss": val_epoch_loss}, step=epoch)
+            mlflow.log_metrics({"train_epoch_loss": float(train_epoch_loss), "val_epoch_loss": float(val_epoch_loss)}, step=epoch)
 
             if val_epoch_loss < best_val:
                 best_val = val_epoch_loss

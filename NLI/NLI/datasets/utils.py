@@ -12,25 +12,25 @@ def create_mask(lengths, device):
 
 def collate_sequences(pad_id):
     def f(batch):
-        s1 = []
-        len_s1 = []
-        s2 = []
-        len_s2 = []
+        vs = []
+        len_vs = []
+        ws = []
+        len_ws = []
         target = []
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         for v, w, t in batch:
-            s1.append(torch.as_tensor(v, dtype=torch.int64, device=device))
-            len_s1.append(len(v))
-            s2.append(torch.as_tensor(w, dtype=torch.int64, device=device))
-            len_s2.append(len(w))
+            vs.append(torch.as_tensor(v, dtype=torch.int64, device=device))
+            len_vs.append(len(v))
+            ws.append(torch.as_tensor(w, dtype=torch.int64, device=device))
+            len_ws.append(len(w))
             target.append(t)
 
-        s1 = pad_sequence(s1, batch_first=True, padding_value=pad_id)
-        s2 = pad_sequence(s2, batch_first=True, padding_value=pad_id)
-        s1_mask = create_mask(len_s1, device)
-        s2_mask = create_mask(len_s2, device)
+        vs = pad_sequence(vs, batch_first=True, padding_value=pad_id)
+        ws = pad_sequence(ws, batch_first=True, padding_value=pad_id)
+        vs_mask = create_mask(len_vs, device)
+        ws_mask = create_mask(len_ws, device)
         target = torch.as_tensor(target, dtype=torch.int64, device=device)
 
-        return s1, s1_mask, s2, s2_mask, target
+        return vs, ws, vs_mask, ws_mask, target
 
     return f
